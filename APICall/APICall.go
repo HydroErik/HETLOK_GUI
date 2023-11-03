@@ -33,6 +33,7 @@ type PipeObj struct {
 	} `json:"Pipes"`
 }
 
+// This is a test of the ability to push and pull with and app password
 // Transformer API Call returns Transformer Pipe Obj or error if failed
 // Note the struct to recieve response object is static in design
 func TransformerCall() (PipeObj, error) {
