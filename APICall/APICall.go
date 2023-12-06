@@ -1,36 +1,33 @@
-package APICall
+package apiCall
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
+
 	//"log"
 	"net/http"
 )
 
 type PipeObj struct {
-	Pipes struct {
-		Pipes []struct {
-			AdminProperties struct {
-				AdminProps []struct {
-					Name              string `json:"name"`
-					SelectListName    string `json:"selectListName"`
-					ValidationRules   string `json:"validationRules"`
-					Ordering          string `json:"ordering"`
-					DefaultValue      string `json:"defaultValue"`
-					DataType          string `json:"dataType"`
-					HelpInfo          string `json:"helpInfo"`
-					DeactivationRules string `json:"deactivationRules"`
-					Title             string `json:"title"`
-					Value             string `json:"value"`
-				} `json:"adminProperties"`
-			} `json:"adminProperties"`
-			Name        string `json:"name"`
-			Description string `json:"description"`
-			Id          string `json:"id"`
-			PipeType    string `json:"pipeType"`
-		} `json:"pipes"`
-	} `json:"Pipes"`
+	Pipes []struct {
+		AdminProps []struct {
+			Name              string `json:"name"`
+			SelectListName    string `json:"selectListName"`
+			ValidationRules   string `json:"validationRules"`
+			Ordering          string `json:"ordering"`
+			DefaultValue      string `json:"defaultValue"`
+			DataType          string `json:"dataType"`
+			HelpInfo          string `json:"helpInfo"`
+			DeactivationRules string `json:"deactivationRules"`
+			Title             string `json:"title"`
+			Value             string `json:"value"`
+		} `json:"adminProperties"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Id          string `json:"id"`
+		PipeType    string `json:"pipeType"`
+	} `json:"pipes"`
 }
 
 // This is a test of the ability to push and pull with and app password
@@ -57,16 +54,26 @@ func TransformerCall() (PipeObj, error) {
 		return PipeObj{}, err
 	}
 
-	
-	
-	for _, p := range p1.Pipes.Pipes {
+	for _, p := range p1.Pipes {
 		fmt.Println(p.Name)
-		for _, q := range p.AdminProperties.AdminProps {
+		for _, q := range p.AdminProps {
 			fmt.Printf("\t%s\n", q)
 		}
 	}
 
-	fmt.Println(p1.Pipes.Pipes[0].AdminProperties.AdminProps[0].Name)
+	//fmt.Println(p1.Pipes[0].AdminProps[0].Name)
 	return p1, nil
 
 }
+
+/* //Testing Main Method to test different function calls
+func main() {
+	pipe, err := TransformerCall()
+
+	if err != nil{
+		log.Fatalf("%s", err)
+	}
+
+	fmt.Print(pipe)
+}
+*/

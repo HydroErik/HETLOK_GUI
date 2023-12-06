@@ -6,9 +6,11 @@ import (
 	"html/template"
 	"net/http"
 	"os"
+	"os/exec"
+	"time"
 
 	//"context"
-	"HETLOK_GUI/APICall"
+	"HETLOK_GUI/apiCall"
 	"HETLOK_GUI/mongoDrive"
 	"log"
 	"math/rand"
@@ -24,7 +26,7 @@ var u = uint8(rand.Intn(255))
 
 var users map[string]mongoDrive.User
 
-var demoPipe APICall.PipeObj
+var demoPipe apiCall.PipeObj
 
 var (
 	key   = []byte{239, 57, 183, 33, 121, 175, 214, u, 52, 235, 33, 167, 74, 91, 153, 39}
@@ -56,14 +58,18 @@ func setHeaders(w http.ResponseWriter) http.ResponseWriter {
 	return w
 }
 
+// Authentication function and re-route
+func authenticate(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+	if auth, ok := s.Values["authenticated"].(bool); !ok || !auth {
+		fmt.Println("Redirecting per auth")
+		http.Redirect(w, r, "/login/", http.StatusFound)
+	}
+}
+
 func makeHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, _ := store.Get(r, "hydro-cookie")
-
-		if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
-			fmt.Println("Redirecting per auth")
-			http.Redirect(w, r, "/login/", http.StatusFound)
-		}
+		authenticate(w, r, session)
 		fn(w, r)
 	}
 }
@@ -71,11 +77,7 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 func makeDemoHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, _ := store.Get(r, "hydro-cookie")
-
-		if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
-			fmt.Println("Redirecting per auth")
-			http.Redirect(w, r, "/login/", http.StatusFound)
-		}
+		authenticate(w, r, session)
 		fn(w, r)
 	}
 }
@@ -150,25 +152,35 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+/*
 // Handle a demo selection screen
 func demoSelectionHandler(w http.ResponseWriter, r *http.Request) {
-	
 	renderTemplate(w, "Pipe Selector", data)
 }
 
 func demoHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "pipeDemo", data)
 }
+*/
 
-//This loop demonstrates running concurancy and its ease of use
-/*
+// This loop demonstrates running concurancy and its ease of use
 func testLoop() {
+	c := 0
+	fmt.Printf("Server Running")
 	for {
-		fmt.Println("Test")
-		time.Sleep(1500000000)
+
+		fmt.Printf(".")
+		c++
+		time.Sleep(1 * time.Second)
+		//Every 4 dots clear stdout
+		if c%4 == 0 {
+			cmd := exec.Command("cmd", "/c", "cls")
+			cmd.Stdout = os.Stdout
+			cmd.Run()
+			fmt.Printf("Server Running")
+		}
 	}
 }
-*/
 
 func main() {
 
@@ -191,16 +203,16 @@ func main() {
 		log.Fatalf("Failed to get user Database with error:\n%v", err)
 	}
 
-	demoPipe = APICall.TransformerCall()
+	demoPipe, _ = apiCall.TransformerCall()
 
 	http.HandleFunc("/", makeHandler(indexHandler))
-	http.HandleFunc("/pipes/", makeDemoHandler(demoHandler))
-	http.HandleFunc("/select/", makeDemoHandler(demoSelectionHandler))
+	//http.HandleFunc("/pipes/", makeDemoHandler(demoHandler))
+	//http.HandleFunc("/select/", makeDemoHandler(demoSelectionHandler))
 	http.HandleFunc("/login/", loginHandler)
 	http.HandleFunc("/validate/", validateHandler)
 	http.HandleFunc("/logout/", logoutHandler)
 
-	//go testLoop() This is our concurency loop test
+	go testLoop() //This is our concurency loop test
 	log.Fatal(http.ListenAndServe(":8080", nil))
 
 }
