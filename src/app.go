@@ -203,7 +203,7 @@ func main() {
 		log.Fatalf("Failed to get user Database with error:\n%v", err)
 	}
 
-	demoPipe, _ = apiCall.TransformerCall()
+	demoPipe, _ = apiCall.TransformerCall(true)
 
 	http.HandleFunc("/", makeHandler(indexHandler))
 	//http.HandleFunc("/pipes/", makeDemoHandler(demoHandler))
