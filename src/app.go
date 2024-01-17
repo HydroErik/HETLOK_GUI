@@ -212,8 +212,9 @@ func main() {
 	http.HandleFunc("/validate/", validateHandler)
 	http.HandleFunc("/logout/", logoutHandler)
 	http.Handle("/resources/", http.StripPrefix("/resources/", http.FileServer(http.Dir("C:/Users/esunb/Documents/github/HETLOK_GUI/resources"))))
+	http.Handle("/JS/", http.StripPrefix("/JS/", http.FileServer(http.Dir("C:/Users/esunb/Documents/github/HETLOK_GUI/JS"))))
 
-	go testLoop() //This is our concurency loop test
+	//go testLoop() //This is our concurency loop test
 	log.Fatal(http.ListenAndServe(":8080", nil))
 
 }

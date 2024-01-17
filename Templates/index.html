@@ -8,31 +8,9 @@
         <title>HETLOK</title>
 
         <!--This Script manages switching between the Burger and the menu full depending on screen resolution-->
-        <script>
-            document.addEventListener('DOMContentLoaded', () => {
-
-                // Get all "navbar-burger" elements
-                const $navbarBurgers = Array.prototype.slice.call(document.querySelectorAll('.navbar-burger'), 0);
-
-                // Add a click event on each of them
-                $navbarBurgers.forEach( el => {
-                el.addEventListener('click', () => {
-
-                    // Get the target from the "data-target" attribute
-                    const target = el.dataset.target;
-                    const $target = document.getElementById(target);
-
-                    // Toggle the "is-active" class on both the "navbar-burger" and the "navbar-menu"
-                    el.classList.toggle('is-active');
-                    $target.classList.toggle('is-active');
-
-                });
-                });
-
-                });
-        </script>
-    </head>
-    <body>
+        <script src="/JS/burgerSwitcher.js"></script>
+        <script src="/JS/modal.js"></script>
+    
         <nav class="navbar is-link is-spaced" style="height: 10%;" >
             <div class="navbar-brand">
                 <a class="navbar-item" href="https://www.hydrologik.com/" target="_blank">
@@ -53,8 +31,18 @@
                         PlaceHolder
                     </a>
                 </div>
+                <div class="navbar-item">
+                    <div class="columns is-mobile is-centered">
+                        <div class="column is-one-fourth">
+                            <button class="button js-modal-trigger is-link" data-target="HETLOK-Modal">
+                                <p class="title is-dark">HETLOK</p>
+                            </button>
+                        </div>
+                    </div>
+                </div>
                 <div class="navbar-end">
                     <div class="navbar-item">
+                        
                         <div class="buttons">
                         <a class="button is-white" href="/">
                             Settings
@@ -67,6 +55,54 @@
                 </div>
             </div>
         </nav>
+    </head>
+    <body>
+        <div class="block">
+            <div class="columns is-mobile is-centered">
+                <div class="column is-one-third">
+                    <div class="card">
+                        <div class="card-image">
+                            <figure class="image">
+                                <img src="/resources/etl-process.png" alt="Extract Transform Load">
+                            </figure>
+                        </div>
+                        <div class="card-content">
+                            <div class="buttons">
+                                <a class="button is-dark is-fullwidth" href="">
+                                    New Pipeline
+                                </a>
+                                <a class="button is-dark is-fullwidth" href="">
+                                    View Pipes
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+
+
+
+        <div id="HETLOK-Modal" class="modal">
+            <div class="modal-background"></div>
+          
+            <div class="modal-content">
+              <div class="box">
+                <p class="title">HETLOK</p>
+                <p>Hydrologik Extract Transform Load Ok<br>
+                    This app is for the administration of HETLOK<br>
+                    New pipelines after intial setup can be defined and instantiated through this app<br>
+                    This is a Hydrologik LLC propriatary tool<br>
+                    Version: 0.1.0<br>
+                    Report bugs to: esundblad@hydrologik.com
+                </p>
+
+              </div>
+            </div>
+          
+            <button class="modal-close is-large" aria-label="close"></button>
+          </div>
     </body>
     <footer>
     </footer>
