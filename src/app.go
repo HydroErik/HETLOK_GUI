@@ -95,10 +95,8 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 func adminHandler(w http.ResponseWriter, r *http.Request) {
 	w = setHeaders(w)
 	session, _ := store.Get(r, "hydro-cookie")
-	user := session.Values["user"].(string)
-	admin := users[user].Admin
-	//Non admin usere redirect
-	if admin {
+	user, ok := session.Values["user"]
+	if ok && users[user.(string)].Admin {
 		renderTemplate(w, "admin", users)
 	} else {
 		http.Redirect(w, r, "/", http.StatusFound)
@@ -112,7 +110,27 @@ func usersHandler(w http.ResponseWriter, r *http.Request) {
 
 func userAddHandler(w http.ResponseWriter, r *http.Request) {
 	w = setHeaders(w)
-	renderTemplate(w, "userAdd", "")
+	switch r.Method {
+	case "GET":
+		renderTemplate(w, "userAdd", "")
+	case "POST":
+		err := r.ParseForm()
+		if err != nil {
+			erStr := "Failed to parse from: " + err.Error()
+			renderTemplate(w, "userAdd", erStr)
+		}
+		usrNme := r.PostForm["username"][0]
+		pswrdRaw := r.PostForm["password"][0]
+		name := r.PostForm["name"][0]
+		email := r.PostForm["email"][0]
+		admin, ok := r.PostForm["admin"]
+		if !ok {
+			admin = []string{"off"}
+		}
+		fmt.Println(name, email, usrNme, pswrdRaw, admin[0])
+		renderTemplate(w, "userAdd", "User Added")
+	}
+
 }
 
 func userUpdateHandler(w http.ResponseWriter, r *http.Request) {
@@ -168,8 +186,6 @@ func validateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login/", http.StatusFound)
 	}
 	session.Values["usrName"] = curUser.Name
-	//TODO fill in validation logic
-	//Set auth to true
 	session.Values["authenticated"] = true
 	session.Values["user"] = usrNme
 	session.Save(r, w)
@@ -182,6 +198,8 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Logout Called")
 	if auth && ok {
 		session.Values["authenticated"] = false
+		session.Values["user"] = nil
+		session.Values["authError"] = nil
 		session.Save(r, w)
 		renderTemplate(w, "logout", "")
 	} else {
