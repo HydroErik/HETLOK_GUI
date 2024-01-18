@@ -23,6 +23,7 @@ import (
 )
 
 var u = uint8(rand.Intn(255))
+var mongo_uri, userDB, userCol string
 
 var users map[string]mongoDrive.User
 
@@ -109,10 +110,19 @@ func usersHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func userAddHandler(w http.ResponseWriter, r *http.Request) {
+	type Data struct {
+		Error bool
+		Text  string
+	}
+
 	w = setHeaders(w)
 	switch r.Method {
 	case "GET":
-		renderTemplate(w, "userAdd", "")
+		data := Data{
+			Error: false,
+			Text:  "",
+		}
+		renderTemplate(w, "userAdd", data)
 	case "POST":
 		err := r.ParseForm()
 		if err != nil {
@@ -123,12 +133,59 @@ func userAddHandler(w http.ResponseWriter, r *http.Request) {
 		pswrdRaw := r.PostForm["password"][0]
 		name := r.PostForm["name"][0]
 		email := r.PostForm["email"][0]
-		admin, ok := r.PostForm["admin"]
-		if !ok {
-			admin = []string{"off"}
+		_, admin := r.PostForm["admin"]
+		newUser := mongoDrive.User{
+			Name:     name,
+			Username: usrNme,
+			Password: pswrdRaw,
+			Email:    email,
+			Admin:    admin,
 		}
-		fmt.Println(name, email, usrNme, pswrdRaw, admin[0])
-		renderTemplate(w, "userAdd", "User Added")
+		fmt.Println(newUser)
+
+		//Create new client with custome error string on fail to render in browser
+
+		client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(mongo_uri))
+		if err != nil {
+			erStr := "Database Connection Failure Error: " + err.Error()
+			data := Data{
+				Error: true,
+				Text:  erStr,
+			}
+			renderTemplate(w, "userAdd", data)
+			return
+		}
+
+		//Call to add new user with custome error message to render in browser
+		err = mongoDrive.AddUser(userCol, userDB, client, newUser)
+		if err != nil {
+			erStr := "Failed to update User Db with error: " + err.Error()
+			data := Data{
+				Error: true,
+				Text:  erStr,
+			}
+			renderTemplate(w, "userAdd", data)
+			return
+		}
+
+		//update users list to reflect new user
+		users, err = mongoDrive.GetUsers(userCol, userDB, client)
+		if err != nil {
+			erStr := "Failed to update Local user list with error: " + err.Error()
+			data := Data{
+				Error: true,
+				Text:  erStr,
+			}
+			renderTemplate(w, "userAdd", data)
+			return
+		}
+		//If no errors then asume user added
+		data := Data{
+			Error: false,
+			Text:  "User Added",
+		}
+		renderTemplate(w, "userAdd", data)
+
 	}
 
 }
@@ -233,9 +290,9 @@ func main() {
 		log.Println("No .env file found")
 	}
 
-	mongo_uri := os.Getenv("MONGOSTRING")
-	userDB := os.Getenv("USERDB")
-	userCol := os.Getenv("USERCOL")
+	mongo_uri = os.Getenv("MONGOSTRING")
+	userDB = os.Getenv("USERDB")
+	userCol = os.Getenv("USERCOL")
 
 	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(mongo_uri))
 	if err != nil {

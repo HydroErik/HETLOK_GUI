@@ -51,7 +51,11 @@
                         </p>
                     </div>
                 </form>
-                <p class="subtitle is-2 has-text-success">{{.}}</p>
+                {{if .Error}}
+                    <p class="subtitle is-2 has-text-danger">{{.Text}}</p>
+                {{else}}
+                    <p class="subtitle is-2 has-text-success">{{.Text}}</p>
+                {{end}}
             </div>
         </div>
     </div>
