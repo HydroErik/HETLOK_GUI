@@ -16,6 +16,7 @@ type User struct {
 	Email    string
 	Password string
 	Username string
+	Admin    bool
 }
 
 // Take in the db and colletion names for user authentication and return a map collection of user objects
@@ -40,6 +41,7 @@ func GetUsers(usrColl string, usrDB string, client *mongo.Client) (map[string]Us
 			Password: dbUser["password"].(string),
 			Name:     dbUser["name"].(string),
 			Username: dbUser["username"].(string),
+			Admin:	  dbUser["admin"].(bool),
 		}
 		userMap[newUser.Username] = newUser
 	}

@@ -34,8 +34,8 @@
                 <div class="navbar-item">
                     <div class="columns is-mobile is-centered">
                         <div class="column is-one-fourth">
-                            <button class="button js-modal-trigger is-link" data-target="HETLOK-Modal">
-                                <p class="title is-dark">HETLOK</p>
+                            <button class="button js-modal-trigger is-ghost " data-target="HETLOK-Modal">
+                                <p class="title has-text-white">HETLOK</p>
                             </button>
                         </div>
                     </div>
@@ -44,12 +44,18 @@
                     <div class="navbar-item">
                         
                         <div class="buttons">
-                        <a class="button is-white" href="/">
-                            Settings
-                        </a>
-                        <form action="/logout/" method="post">
-                            <input class="button is-white" type="submit" value="logout">
-                        </form>
+                            {{if .Admin}}
+                                <a class="button is-white" href="/admin">
+                                    Admin
+                                </a>
+                            {{else}}
+                                <a class="button is-white" href="/profile">
+                                    Profile
+                                </a>
+                            {{end}}
+                            <form action="/logout/" method="post">
+                                <input class="button is-white" type="submit" value="logout">
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -57,6 +63,7 @@
         </nav>
     </head>
     <body>
+        <div class="block"></div>
         <div class="block">
             <div class="columns is-mobile is-centered">
                 <div class="column is-one-third">

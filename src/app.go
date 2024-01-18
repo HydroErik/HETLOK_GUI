@@ -10,7 +10,7 @@ import (
 	"time"
 
 	//"context"
-	"HETLOK_GUI/apiCall"
+	//"HETLOK_GUI/apiCall"
 	"HETLOK_GUI/mongoDrive"
 	"log"
 	"math/rand"
@@ -26,8 +26,6 @@ var u = uint8(rand.Intn(255))
 
 var users map[string]mongoDrive.User
 
-var demoPipe apiCall.PipeObj
-
 var (
 	key   = []byte{239, 57, 183, 33, 121, 175, 214, u, 52, 235, 33, 167, 74, 91, 153, 39}
 	store = sessions.NewCookieStore(key)
@@ -38,6 +36,11 @@ var templates = template.Must(template.ParseFiles(
 	"../Templates/login.html",
 	"../Templates/logout.html",
 	"../Templates/pipeDemo.html",
+	"../Templates/admin.html",
+	"../Templates/users.html",
+	"../Templates/userAdd.html",
+	"../Templates/userUpdate.html",
+	"../Templates/userDelete.html",
 ))
 
 // Render the provide template string with the passed in data
@@ -74,19 +77,37 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	}
 }
 
-func makeDemoHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		session, _ := store.Get(r, "hydro-cookie")
-		authenticate(w, r, session)
-		fn(w, r)
-	}
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	w = setHeaders(w)
+	session, _ := store.Get(r, "hydro-cookie")
+	user := session.Values["user"].(string)
+	admin := users[user].Admin
+	renderTemplate(w, "index", map[string]bool{"Admin": admin})
 }
 
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-	//fmt.Println("index handler called")
-	//session, _ := store.Get(r, "hydro-cookie")
+func adminHandler(w http.ResponseWriter, r *http.Request) {
 	w = setHeaders(w)
-	renderTemplate(w, "index", "")
+	renderTemplate(w, "admin", "")
+}
+
+func usersHandler(w http.ResponseWriter, r *http.Request) {
+	w = setHeaders(w)
+	renderTemplate(w, "users", "")
+}
+
+func userAddHandler(w http.ResponseWriter, r *http.Request) {
+	w = setHeaders(w)
+	renderTemplate(w, "userAdd", "")
+}
+
+func userUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	w = setHeaders(w)
+	renderTemplate(w, "userUpdate", "")
+}
+
+func userDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	w = setHeaders(w)
+	renderTemplate(w, "userDelete", "")
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -135,6 +156,7 @@ func validateHandler(w http.ResponseWriter, r *http.Request) {
 	//TODO fill in validation logic
 	//Set auth to true
 	session.Values["authenticated"] = true
+	session.Values["user"] = usrNme
 	session.Save(r, w)
 	http.Redirect(w, r, "/", http.StatusFound)
 }
@@ -151,17 +173,6 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 	}
 }
-
-/*
-// Handle a demo selection screen
-func demoSelectionHandler(w http.ResponseWriter, r *http.Request) {
-	renderTemplate(w, "Pipe Selector", data)
-}
-
-func demoHandler(w http.ResponseWriter, r *http.Request) {
-	renderTemplate(w, "pipeDemo", data)
-}
-*/
 
 // This loop demonstrates running concurancy and its ease of use
 func testLoop() {
@@ -203,11 +214,16 @@ func main() {
 		log.Fatalf("Failed to get user Database with error:\n%v", err)
 	}
 
-	demoPipe, _ = apiCall.TransformerCall(true)
+	//demoPipe, _ = apiCall.TransformerCall(true)
 
 	http.HandleFunc("/", makeHandler(indexHandler))
-	//http.HandleFunc("/pipes/", makeDemoHandler(demoHandler))
-	//http.HandleFunc("/select/", makeDemoHandler(demoSelectionHandler))
+	http.HandleFunc("/admin/", makeHandler(adminHandler))
+
+	http.HandleFunc("/users", makeHandler(usersHandler))
+	http.HandleFunc("/addUser", makeHandler(userAddHandler))
+	http.HandleFunc("/updateUser", makeHandler(userUpdateHandler))
+	http.HandleFunc("/deleteUser", makeHandler(userDeleteHandler))
+
 	http.HandleFunc("/login/", loginHandler)
 	http.HandleFunc("/validate/", validateHandler)
 	http.HandleFunc("/logout/", logoutHandler)
