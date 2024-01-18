@@ -1,1 +1,28 @@
-<h1>Users</h1>
+<div class="columns is-mobile is-centered">
+    <div class="column is-one-third">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Username</th>
+                    <th>Admin</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range $usrNme, $user := .}}
+                    <tr>
+                        <td>{{$user.Name}}</td>
+                        <td>{{$user.Email}}</td>
+                        <td>{{$user.Username}}</td>
+                        {{if $user.Admin}}
+                            <td>TRUE</td>
+                        {{else}}
+                            <td>FALSE</td>
+                        {{end}}
+                    </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -80,19 +80,34 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	w = setHeaders(w)
 	session, _ := store.Get(r, "hydro-cookie")
-	user := session.Values["user"].(string)
-	admin := users[user].Admin
+	var admin bool
+
+	//Check if user had been loaded yet, if not default to not admin
+	user, ok := session.Values["user"]
+	if !ok {
+		admin = false
+	} else {
+		admin = users[user.(string)].Admin
+	}
 	renderTemplate(w, "index", map[string]bool{"Admin": admin})
 }
 
 func adminHandler(w http.ResponseWriter, r *http.Request) {
 	w = setHeaders(w)
-	renderTemplate(w, "admin", "")
+	session, _ := store.Get(r, "hydro-cookie")
+	user := session.Values["user"].(string)
+	admin := users[user].Admin
+	//Non admin usere redirect
+	if admin {
+		renderTemplate(w, "admin", users)
+	} else {
+		http.Redirect(w, r, "/", http.StatusFound)
+	}
 }
 
 func usersHandler(w http.ResponseWriter, r *http.Request) {
 	w = setHeaders(w)
-	renderTemplate(w, "users", "")
+	renderTemplate(w, "users", users)
 }
 
 func userAddHandler(w http.ResponseWriter, r *http.Request) {
