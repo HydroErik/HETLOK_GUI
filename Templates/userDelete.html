@@ -36,6 +36,15 @@
                 </div>
             </form>
         </div>
+        <!--Not currently working Fade out animation for response text-->
+        <style>
+            
+            .fade-out-res {animation: fadeOut ease 3s;}
+            @keyframes fadeOut {
+                0% { opacity: 1; }
+                100% { opacity: 0; }
+            }
+        </style>
         <div >
             {{if .Data.Error}}
                     <p id="fade-out-res" class="subtitle is-2 has-text-danger">{{.Data.Text}}</p>
