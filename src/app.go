@@ -27,6 +27,11 @@ var mongo_uri, userDB, userCol string
 
 var users map[string]mongoDrive.User
 
+type Data struct {
+	Error bool
+	Text  string
+}
+
 var (
 	key   = []byte{239, 57, 183, 33, 121, 175, 214, u, 52, 235, 33, 167, 74, 91, 153, 39}
 	store = sessions.NewCookieStore(key)
@@ -110,11 +115,6 @@ func usersHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func userAddHandler(w http.ResponseWriter, r *http.Request) {
-	type Data struct {
-		Error bool
-		Text  string
-	}
-
 	w = setHeaders(w)
 	switch r.Method {
 	case "GET":
@@ -127,7 +127,8 @@ func userAddHandler(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
 		if err != nil {
 			erStr := "Failed to parse from: " + err.Error()
-			renderTemplate(w, "userAdd", erStr)
+			data := Data{Error: true, Text: erStr}
+			renderTemplate(w, "userDelete", data)
 		}
 		usrNme := r.PostForm["username"][0]
 		pswrdRaw := r.PostForm["password"][0]
@@ -144,7 +145,6 @@ func userAddHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(newUser)
 
 		//Create new client with custome error string on fail to render in browser
-
 		client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(mongo_uri))
 		if err != nil {
 			erStr := "Database Connection Failure Error: " + err.Error()
@@ -197,7 +197,64 @@ func userUpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 func userDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	w = setHeaders(w)
-	renderTemplate(w, "userDelete", "")
+	type DelData struct {
+		Data  Data
+		Users map[string]mongoDrive.User
+	}
+	switch r.Method {
+	case "GET":
+		renderTemplate(w, "userDelete", DelData{Data: Data{Error: false, Text: ""}, Users: users})
+	case "POST":
+		err := r.ParseForm()
+		if err != nil {
+			erStr := "Failed to parse from: " + err.Error()
+			data := Data{Error: true, Text: erStr}
+			renderTemplate(w, "userDelete", data)
+		}
+		delUser := r.PostForm["delete-select"][0]
+
+		//Curent fix for passing default value
+		//Later will add logic to deactivate button
+		if len(delUser) > 0 {
+
+			//Create new client with custome error string on fail to render in browser
+			client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(mongo_uri))
+			if err != nil {
+				erStr := "Database Connection Failure Error: " + err.Error()
+				data := Data{
+					Error: true,
+					Text:  erStr,
+				}
+				renderTemplate(w, "userDelete", DelData{Data: data, Users: users})
+				return
+			}
+			//Call to add new user with custome error message to render in browser
+			err = mongoDrive.DeleteUser(userCol, userDB, client, users[delUser])
+			if err != nil {
+				erStr := "Failed to update User Db with error: " + err.Error()
+				data := Data{
+					Error: true,
+					Text:  erStr,
+				}
+				renderTemplate(w, "userDelete", DelData{Data: data, Users: users})
+				return
+			}
+			//update users list to reflect new user
+			users, err = mongoDrive.GetUsers(userCol, userDB, client)
+			if err != nil {
+				erStr := "Failed to update Local user list with error: " + err.Error()
+				data := Data{
+					Error: true,
+					Text:  erStr,
+				}
+				renderTemplate(w, "userDelete", DelData{Data: data, Users: users})
+				return
+			}
+			renderTemplate(w, "userDelete", DelData{Data: Data{Error: false, Text: "User Deleted"}, Users: users})
+			return
+		}
+		renderTemplate(w, "userDelete", DelData{Data: Data{Error: false, Text: ""}, Users: users})
+	}
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {

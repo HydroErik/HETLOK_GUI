@@ -2,6 +2,7 @@ package mongoDrive
 
 import (
 	"context"
+	"errors"
 
 	//"os"
 	//"reflect"
@@ -73,4 +74,24 @@ func AddUser(usrColl string, usrDB string, client *mongo.Client, newUser User) e
 	}
 
 	return nil
+}
+
+
+// Take in DB connection parameters and user struct of user to delete
+// Execute delete and return nil unless error
+func DeleteUser(usrColl string, usrDB string, client *mongo.Client, delUser User) error {
+	userCol := client.Database(usrDB).Collection(usrColl)
+	filter := bson.M{"username": delUser.Username}
+
+	res, err := userCol.DeleteOne(context.TODO(), filter)
+	if err != nil{
+		return err
+	}
+
+	if res.DeletedCount != 1 {
+		return errors.New("ERROR Couldn't find user record")
+	}
+
+	return nil
+
 }

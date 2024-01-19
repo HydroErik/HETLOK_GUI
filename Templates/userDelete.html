@@ -8,4 +8,40 @@
 </div>
 <div class="block"></div>
 <div class="block">
+    <div class="columns is-mobile is-centered">
+        <div class="column is-one-third">
+            <form id="user-delete-form" class="box" action="/deleteUser" method="post">
+                <div class="field is-horizontal">
+                    <div class="field-label is-normal">
+                    <label class="label">Select User to Delete</label>
+                    </div>
+                    <div class="field-body">
+                        <div class="field is-narrow">
+                        <div class="control">
+                            <div class="select is-fullwidth">
+                                <select id="delete-select" name="delete-select">
+                                        <option value="" selected disabled hidden>Select User</option>
+                                    {{range $usrNme, $user := .Users}}
+                                        <option value={{$user.Username}}>{{$user.Name}}</option>
+                                    {{end}}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="field" >
+                    <p class="control">
+                        <input hx-post="/deleteUser" hx-confirm="Are you sure you want to delete user?" hx-target="#tab-swap-target"  class="button is-info is-outlined" type="submit" value="Delete User">
+                    </p>
+                </div>
+            </form>
+        </div>
+        <div >
+            {{if .Data.Error}}
+                    <p id="fade-out-res" class="subtitle is-2 has-text-danger">{{.Data.Text}}</p>
+            {{else}}
+                    <p id="fade-out-res" class="subtitle is-2 has-text-success">{{.Data.Text}}</p>
+            {{end}}
+        </div>
+    </div>
 </div>
