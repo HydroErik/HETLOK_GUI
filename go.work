@@ -1,6 +1,4 @@
 go 1.21.6
 
 use ./src
-use ./mongoDrive
 use ./apiCall
-use ./oauthTest

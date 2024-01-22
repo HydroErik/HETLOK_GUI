@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"html/template"
+	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/exec"
@@ -11,27 +13,16 @@ import (
 
 	//"context"
 	//"HETLOK_GUI/apiCall"
-	"HETLOK_GUI/mongoDrive"
-	"log"
-	"math/rand"
+	//"HETLOK_GUI/mongoDrive"
+
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 
 	"github.com/gorilla/sessions"
 	"github.com/joho/godotenv"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var u = uint8(rand.Intn(255))
-var mongo_uri, userDB, userCol string
-
-var users map[string]mongoDrive.User
-
-type Data struct {
-	Error bool
-	Text  string
-}
-
 var (
 	key   = []byte{239, 57, 183, 33, 121, 175, 214, u, 52, 235, 33, 167, 74, 91, 153, 39}
 	store = sessions.NewCookieStore(key)
@@ -48,6 +39,17 @@ var templates = template.Must(template.ParseFiles(
 	"../Templates/userUpdate.html",
 	"../Templates/userDelete.html",
 ))
+
+var conf = &oauth2.Config{
+	ClientID:     "548937884118-al1bjls2dck7600t2dl3p9ehgbg5atl8.apps.googleusercontent.com",
+	ClientSecret: "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",
+	RedirectURL:  "http://localhost:8080/validate/",
+	Scopes: []string{
+		"openid",
+		"email",
+	},
+	Endpoint: google.Endpoint,
+}
 
 // Render the provide template string with the passed in data
 func renderTemplate(w http.ResponseWriter, tmpl string, data any) {
@@ -85,176 +87,8 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	w = setHeaders(w)
-	session, _ := store.Get(r, "hydro-cookie")
-	var admin bool
-
-	//Check if user had been loaded yet, if not default to not admin
-	user, ok := session.Values["user"]
-	if !ok {
-		admin = false
-	} else {
-		admin = users[user.(string)].Admin
-	}
-	renderTemplate(w, "index", map[string]bool{"Admin": admin})
-}
-
-func adminHandler(w http.ResponseWriter, r *http.Request) {
-	w = setHeaders(w)
-	session, _ := store.Get(r, "hydro-cookie")
-	user, ok := session.Values["user"]
-	if ok && users[user.(string)].Admin {
-		renderTemplate(w, "admin", users)
-	} else {
-		http.Redirect(w, r, "/", http.StatusFound)
-	}
-}
-
-func usersHandler(w http.ResponseWriter, r *http.Request) {
-	w = setHeaders(w)
-	renderTemplate(w, "users", users)
-}
-
-func userAddHandler(w http.ResponseWriter, r *http.Request) {
-	w = setHeaders(w)
-	switch r.Method {
-	case "GET":
-		data := Data{
-			Error: false,
-			Text:  "",
-		}
-		renderTemplate(w, "userAdd", data)
-	case "POST":
-		err := r.ParseForm()
-		if err != nil {
-			erStr := "Failed to parse from: " + err.Error()
-			data := Data{Error: true, Text: erStr}
-			renderTemplate(w, "userDelete", data)
-		}
-		usrNme := r.PostForm["username"][0]
-		pswrdRaw := r.PostForm["password"][0]
-		name := r.PostForm["name"][0]
-		email := r.PostForm["email"][0]
-		_, admin := r.PostForm["admin"]
-		newUser := mongoDrive.User{
-			Name:     name,
-			Username: usrNme,
-			Password: pswrdRaw,
-			Email:    email,
-			Admin:    admin,
-		}
-		fmt.Println(newUser)
-
-		//Create new client with custome error string on fail to render in browser
-		client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(mongo_uri))
-		if err != nil {
-			erStr := "Database Connection Failure Error: " + err.Error()
-			data := Data{
-				Error: true,
-				Text:  erStr,
-			}
-			renderTemplate(w, "userAdd", data)
-			return
-		}
-
-		//Call to add new user with custome error message to render in browser
-		err = mongoDrive.AddUser(userCol, userDB, client, newUser)
-		if err != nil {
-			erStr := "Failed to update User Db with error: " + err.Error()
-			data := Data{
-				Error: true,
-				Text:  erStr,
-			}
-			renderTemplate(w, "userAdd", data)
-			return
-		}
-
-		//update users list to reflect new user
-		users, err = mongoDrive.GetUsers(userCol, userDB, client)
-		if err != nil {
-			erStr := "Failed to update Local user list with error: " + err.Error()
-			data := Data{
-				Error: true,
-				Text:  erStr,
-			}
-			renderTemplate(w, "userAdd", data)
-			return
-		}
-		//If no errors then asume user added
-		data := Data{
-			Error: false,
-			Text:  "User Added",
-		}
-		renderTemplate(w, "userAdd", data)
-
-	}
-
-}
-
-func userUpdateHandler(w http.ResponseWriter, r *http.Request) {
-	w = setHeaders(w)
-	renderTemplate(w, "userUpdate", "")
-}
-
-func userDeleteHandler(w http.ResponseWriter, r *http.Request) {
-	w = setHeaders(w)
-	type DelData struct {
-		Data  Data
-		Users map[string]mongoDrive.User
-	}
-	switch r.Method {
-	case "GET":
-		renderTemplate(w, "userDelete", DelData{Data: Data{Error: false, Text: ""}, Users: users})
-	case "POST":
-		err := r.ParseForm()
-		if err != nil {
-			erStr := "Failed to parse from: " + err.Error()
-			data := Data{Error: true, Text: erStr}
-			renderTemplate(w, "userDelete", data)
-		}
-		delUser := r.PostForm["delete-select"][0]
-
-		//Curent fix for passing default value
-		//Later will add logic to deactivate button
-		if len(delUser) > 0 {
-
-			//Create new client with custome error string on fail to render in browser
-			client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(mongo_uri))
-			if err != nil {
-				erStr := "Database Connection Failure Error: " + err.Error()
-				data := Data{
-					Error: true,
-					Text:  erStr,
-				}
-				renderTemplate(w, "userDelete", DelData{Data: data, Users: users})
-				return
-			}
-			//Call to add new user with custome error message to render in browser
-			err = mongoDrive.DeleteUser(userCol, userDB, client, users[delUser])
-			if err != nil {
-				erStr := "Failed to update User Db with error: " + err.Error()
-				data := Data{
-					Error: true,
-					Text:  erStr,
-				}
-				renderTemplate(w, "userDelete", DelData{Data: data, Users: users})
-				return
-			}
-			//update users list to reflect new user
-			users, err = mongoDrive.GetUsers(userCol, userDB, client)
-			if err != nil {
-				erStr := "Failed to update Local user list with error: " + err.Error()
-				data := Data{
-					Error: true,
-					Text:  erStr,
-				}
-				renderTemplate(w, "userDelete", DelData{Data: data, Users: users})
-				return
-			}
-			renderTemplate(w, "userDelete", DelData{Data: Data{Error: false, Text: "User Deleted"}, Users: users})
-			return
-		}
-		renderTemplate(w, "userDelete", DelData{Data: Data{Error: false, Text: ""}, Users: users})
-	}
+	//session, _ := store.Get(r, "hydro-cookie")
+	renderTemplate(w, "index", "")
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -262,46 +96,60 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := store.Get(r, "hydro-cookie")
 	w = setHeaders(w)
 
+	// Redirect user to Google's consent page to ask for permission
+	// for the scopes specified above.
+	url := conf.AuthCodeURL("state")
+
 	//If already authenticated push to index
 	val, ok := session.Values["authenticated"].(bool)
 	if ok && val {
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
 
-	AuthEr, ok := session.Values["authError"]
-	if !ok {
-		renderTemplate(w, "login", "")
-	} else {
-		renderTemplate(w, "login", AuthEr)
-	}
+	renderTemplate(w, "login", url)
 }
 
-func validateHandler(w http.ResponseWriter, r *http.Request) {
+// ?state=state&code=4%2F0AfJohXmWhexYzACmhbR3vtNaWQTuUnmyMDT0K9jQBmoHH23rNjyYkLiqiWPE_f7ApJw_YQ&scope=openid&authuser=0&prompt=consent
+func oauthValidate(w http.ResponseWriter, r *http.Request) {
 	session, _ := store.Get(r, "hydro-cookie")
-	err := r.ParseForm()
+	code := r.URL.Query().Get("code")
+	token, err := conf.Exchange(context.Background(), code)
 	if err != nil {
-		session.Values["authError"] = "Server Error Parsing From Submission:\n" + err.Error()
-		session.Save(r, w)
-		http.Redirect(w, r, "/login/", http.StatusFound)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	usrNme := r.PostForm["username"][0]
-	pswrdRaw := r.PostForm["password"][0]
-	curUser, ok := users[usrNme]
-	if !ok {
-		session.Values["authError"] = "Username Not Found"
-		session.Save(r, w)
-		http.Redirect(w, r, "/login/", http.StatusFound)
-	}
-	pasCrypt := curUser.Password
-	err = bcrypt.CompareHashAndPassword([]byte(pasCrypt), []byte(pswrdRaw))
-	if err != nil {
-		session.Values["authError"] = "Incorect Password"
-		session.Save(r, w)
-		http.Redirect(w, r, "/login/", http.StatusFound)
-	}
-	session.Values["usrName"] = curUser.Name
+
+	/*
+		// Get user info using token
+		client := &http.Client{}
+		req, err := http.NewRequest(http.MethodGet, googleUserinfoEndpoint, nil)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
+
+		resp, err := client.Do(req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer resp.Body.Close()
+
+		// Decode user info JSON
+		var userinfo map[string]interface{}
+		err = json.NewDecoder(resp.Body).Decode(&userinfo)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Access user information from the map
+		fmt.Fprintf(w, "Name: %s\nEmail: %s", userinfo["name"], userinfo["email"])
+
+	*/
 	session.Values["authenticated"] = true
-	session.Values["user"] = usrNme
+	session.Values["accessToken"] = token.AccessToken
 	session.Save(r, w)
 	http.Redirect(w, r, "/", http.StatusFound)
 }
@@ -311,9 +159,18 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	auth, ok := session.Values["authenticated"].(bool)
 	fmt.Println("Logout Called")
 	if auth && ok {
+		//Google logout URL
+		url := "https://accounts.google.com/o/oauth2/revoke?token=" + session.Values["accessToken"].(string)
+
+		//logout of google
+		resp, err := http.Post(url, "application/x-www-form-urlencoded", nil)
+		if err != nil {
+			http.NotFound(w, r)
+		}
+		defer resp.Body.Close()
+
+		//app control log out
 		session.Values["authenticated"] = false
-		session.Values["user"] = nil
-		session.Values["authError"] = nil
 		session.Save(r, w)
 		renderTemplate(w, "logout", "")
 	} else {
@@ -346,33 +203,12 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
 	}
-
-	mongo_uri = os.Getenv("MONGOSTRING")
-	userDB = os.Getenv("USERDB")
-	userCol = os.Getenv("USERCOL")
-
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(mongo_uri))
-	if err != nil {
-		log.Fatalf("Couldnt Connect to MongoDB with error:\n%v", err)
-	}
-
-	users, err = mongoDrive.GetUsers(userCol, userDB, client)
-	if err != nil {
-		log.Fatalf("Failed to get user Database with error:\n%v", err)
-	}
-
 	//demoPipe, _ = apiCall.TransformerCall(true)
 
 	http.HandleFunc("/", makeHandler(indexHandler))
-	http.HandleFunc("/admin/", makeHandler(adminHandler))
-
-	http.HandleFunc("/users", makeHandler(usersHandler))
-	http.HandleFunc("/addUser", makeHandler(userAddHandler))
-	http.HandleFunc("/updateUser", makeHandler(userUpdateHandler))
-	http.HandleFunc("/deleteUser", makeHandler(userDeleteHandler))
 
 	http.HandleFunc("/login/", loginHandler)
-	http.HandleFunc("/validate/", validateHandler)
+	http.HandleFunc("/validate/", oauthValidate)
 	http.HandleFunc("/logout/", logoutHandler)
 	http.Handle("/resources/", http.StripPrefix("/resources/", http.FileServer(http.Dir("C:/Users/esunb/Documents/github/HETLOK_GUI/resources"))))
 	http.Handle("/JS/", http.StripPrefix("/JS/", http.FileServer(http.Dir("C:/Users/esunb/Documents/github/HETLOK_GUI/JS"))))
