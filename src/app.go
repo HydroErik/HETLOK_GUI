@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -32,12 +33,6 @@ var templates = template.Must(template.ParseFiles(
 	"../Templates/index.html",
 	"../Templates/login.html",
 	"../Templates/logout.html",
-	"../Templates/pipeDemo.html",
-	"../Templates/admin.html",
-	"../Templates/users.html",
-	"../Templates/userAdd.html",
-	"../Templates/userUpdate.html",
-	"../Templates/userDelete.html",
 ))
 
 var conf = &oauth2.Config{
@@ -47,6 +42,7 @@ var conf = &oauth2.Config{
 	Scopes: []string{
 		"openid",
 		"email",
+		"https://www.googleapis.com/auth/userinfo.profile",
 	},
 	Endpoint: google.Endpoint,
 }
@@ -87,8 +83,8 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	w = setHeaders(w)
-	//session, _ := store.Get(r, "hydro-cookie")
-	renderTemplate(w, "index", "")
+	session, _ := store.Get(r, "hydro-cookie")
+	renderTemplate(w, "index", session.Values["name"])
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -119,35 +115,32 @@ func oauthValidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	/*
-		// Get user info using token
-		client := &http.Client{}
-		req, err := http.NewRequest(http.MethodGet, googleUserinfoEndpoint, nil)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
+	// Get user info using token
+	client := &http.Client{}
+	req, err := http.NewRequest(http.MethodGet, "https://www.googleapis.com/oauth2/v1/userinfo?alt=json", nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
 
-		resp, err := client.Do(req)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		defer resp.Body.Close()
+	resp, err := client.Do(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
 
-		// Decode user info JSON
-		var userinfo map[string]interface{}
-		err = json.NewDecoder(resp.Body).Decode(&userinfo)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	// Decode user info JSON
+	var userinfo map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&userinfo)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-		// Access user information from the map
-		fmt.Fprintf(w, "Name: %s\nEmail: %s", userinfo["name"], userinfo["email"])
-
-	*/
+	session.Values["email"] = userinfo["email"]
+	session.Values["name"] = userinfo["given_name"]
 	session.Values["authenticated"] = true
 	session.Values["accessToken"] = token.AccessToken
 	session.Save(r, w)
