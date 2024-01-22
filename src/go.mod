@@ -1,6 +1,6 @@
 module HETOLOK_GUI
 
-go 1.21.0
+go 1.21.6
 
 require (
 	github.com/gorilla/sessions v1.2.1
