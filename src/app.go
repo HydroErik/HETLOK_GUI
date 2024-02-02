@@ -1,6 +1,7 @@
 package main
 
 import (
+	"apiCall"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"sort"
 	"time"
 
 	//"context"
@@ -33,19 +35,11 @@ var templates = template.Must(template.ParseFiles(
 	"../Templates/index.html",
 	"../Templates/login.html",
 	"../Templates/logout.html",
+	"../Templates/clients.html",
 ))
 
-var conf = &oauth2.Config{
-	ClientID:     "548937884118-al1bjls2dck7600t2dl3p9ehgbg5atl8.apps.googleusercontent.com",
-	ClientSecret: "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",
-	RedirectURL:  "http://localhost:8080/validate/",
-	Scopes: []string{
-		"openid",
-		"email",
-		"https://www.googleapis.com/auth/userinfo.profile",
-	},
-	Endpoint: google.Endpoint,
-}
+var hconf oauth2.Config
+var conf = &hconf
 
 // Render the provide template string with the passed in data
 func renderTemplate(w http.ResponseWriter, tmpl string, data any) {
@@ -87,6 +81,33 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "index", session.Values["name"])
 }
 
+func clientsHandler(w http.ResponseWriter, r *http.Request) {
+	w = setHeaders(w)
+	var err error
+	data := struct {
+		Er   bool
+		ErM  string
+		Data []interface{}
+	}{
+		Er:   false,
+		ErM:  "",
+		Data: []interface{}{},
+	}
+	data.Data, err = apiCall.QueryDB("client", "a", "", "")
+	if err != nil {
+		data.Er = true
+		data.ErM = err.Error()
+		renderTemplate(w, "clients", data)
+		return
+	}
+
+	sort.Slice(data.Data, func(i, j int) bool {
+		return int(data.Data[i].(map[string]interface{})["clientId"].(float64)) < int(data.Data[j].(map[string]interface{})["clientId"].(float64))
+	})
+
+	renderTemplate(w, "clients", data)
+}
+
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	//fmt.Println("Login handler Called")
 	session, _ := store.Get(r, "hydro-cookie")
@@ -105,7 +126,6 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "login", url)
 }
 
-// ?state=state&code=4%2F0AfJohXmWhexYzACmhbR3vtNaWQTuUnmyMDT0K9jQBmoHH23rNjyYkLiqiWPE_f7ApJw_YQ&scope=openid&authuser=0&prompt=consent
 func oauthValidate(w http.ResponseWriter, r *http.Request) {
 	session, _ := store.Get(r, "hydro-cookie")
 	code := r.URL.Query().Get("code")
@@ -196,17 +216,32 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
 	}
+	hconf = oauth2.Config{
+		ClientID:     os.Getenv("GID"),
+		ClientSecret: os.Getenv("GSEC"),
+		RedirectURL:  os.Getenv("RDRCT"),
+		Scopes: []string{
+			"openid",
+			"email",
+			"https://www.googleapis.com/auth/userinfo.profile",
+		},
+		Endpoint: google.Endpoint,
+	}
+
 	//demoPipe, _ = apiCall.TransformerCall(true)
 
 	http.HandleFunc("/", makeHandler(indexHandler))
+	http.HandleFunc("/clients", makeHandler(clientsHandler))
 
 	http.HandleFunc("/login/", loginHandler)
 	http.HandleFunc("/validate/", oauthValidate)
 	http.HandleFunc("/logout/", logoutHandler)
+
+	//Serve out local files for resources
 	http.Handle("/resources/", http.StripPrefix("/resources/", http.FileServer(http.Dir("C:/Users/esunb/Documents/github/HETLOK_GUI/resources"))))
 	http.Handle("/JS/", http.StripPrefix("/JS/", http.FileServer(http.Dir("C:/Users/esunb/Documents/github/HETLOK_GUI/JS"))))
 
 	//go testLoop() //This is our concurency loop test
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8888", nil))
 
 }

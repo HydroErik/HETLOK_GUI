@@ -1,3 +1,3 @@
-module HETLOK_GUI/apiCall
+module apiCall
 
-go 1.21.0
+go 1.21.6

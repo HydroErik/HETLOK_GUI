@@ -2,6 +2,8 @@ package apiCall
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 
 	//"log"
@@ -46,7 +48,16 @@ type ListsObj struct {
 	} `json:"selectLists"`
 }
 
-// This is a test of the ability to push and pull with and app password
+type Client struct {
+	ClientId        float64 `json:"clientId"`
+	Name            string  `json:"name"`
+	ShortName       string  `json:"shortName"`
+	Notes           string  `json:"notes"`
+	IsEnabled       bool    `json:"isEnabled"`
+	CreateTimeStamp string  `json:"createTimestamp"`
+	TimeZoneCode    float64 `json:"timezoneId"`
+}
+
 // Transformer API Call returns Transformer Pipe Obj or error if failed
 // Note the struct to recieve response object is static in design
 func TransformerCall(admin bool) (PipeObj, error) {
@@ -117,30 +128,133 @@ func GetLists(id string, noItem string) (ListsObj, error) {
 
 }
 
+// Get Client list returns list of client objects
+// Function made obsolete by QueryDB call
+func GetClients() ([]Client, error) {
+	urlString := API_address + "query?table=client&operation=allRecords"
+
+	res, err := http.Get(urlString)
+	if err != nil {
+		return []Client{}, nil
+	}
+
+	var resp map[string]interface{}
+	var clist []Client
+
+	defer res.Body.Close()
+	err = json.NewDecoder(res.Body).Decode(&resp)
+	if err != nil {
+		return []Client{}, nil
+	}
+
+	for _, cl := range resp["queryReply"].(map[string]interface{})["content"].([]interface{}) {
+		clMap := cl.(map[string]interface{})
+		if len(clMap) > 0 {
+			newCli := Client{
+				ClientId:        clMap["clientId"].(float64),
+				Name:            clMap["name"].(string),
+				ShortName:       clMap["shortName"].(string),
+				Notes:           clMap["notes"].(string),
+				IsEnabled:       clMap["isEnabled"].(bool),
+				CreateTimeStamp: clMap["createTimestamp"].(string),
+				TimeZoneCode:    clMap["timezoneId"].(float64),
+			}
+			clist = append(clist, newCli)
+		}
+
+	}
+
+	return clist, nil
+}
+
+// Query DB api call return interface object that needs to be parsed by the function that calls
+// 3 query types {oneRecordName | oneRecordId | allRecords}
+// need name or ID for one record calls requires table name
+func QueryDB(table string, rtype string, name string, id string) ([]interface{}, error) {
+	var query string
+	var res map[string]interface{}
+
+	//Swithc based on type
+	switch rtype {
+	case "a":
+		//All records call
+		query = fmt.Sprintf("%squery?table=%s&operation=allRecords", API_address, table)
+	case "n":
+		//Single record by name
+		if name == "" {
+			return []interface{}{}, errors.New("to request by name we need the record name")
+		}
+		query = fmt.Sprintf("%squery?table=%s&operation=oneRecordByName&name=%s", API_address, table, name)
+	case "i":
+		//Single record by ID
+		if name == "" {
+			return []interface{}{}, errors.New("to request by ID we need the record id")
+		}
+		query = fmt.Sprintf("%squery?table=%s&operation=oneRecordById&recordId=%s", API_address, table, id)
+	default:
+		return []interface{}{}, errors.New("invalid request type: " + rtype + "types are: (a)ll, (n)ame, (i)d")
+	}
+
+	r, err := http.Get(query)
+	if err != nil {
+		return []interface{}{}, fmt.Errorf("failed get query: %s\nerror message: %s", query, err.Error())
+	}
+
+	defer r.Body.Close()
+	err = json.NewDecoder(r.Body).Decode(&res)
+	if err != nil {
+		return []interface{}{}, fmt.Errorf("failed to decode JSON error: %s query: %s ", err.Error(), query)
+	}
+
+	content, ok := res["queryReply"].(map[string]interface{})["content"].([]interface{})
+	if !ok {
+		return []interface{}{}, fmt.Errorf("error parsing res for query reply and conten\nRes:\n%s", res)
+	}
+	return content, nil
+
+}
+
 /*
 // Testing Main Method to test different function calls
 func main() {
 	/*
-		pipe, err := TransformerCall(true)
+			pipe, err := TransformerCall(true)
 
-		if err != nil {
-			log.Fatalf("%s", err)
-		}
-		fmt.Printf("\n\n\n\n\n\n%s", pipe)
-
-
-	/*
-		lists, err := GetLists("0", "false")
-
-		if err != nil {
-			log.Fatalf("%s", err)
-		}
-
-		fmt.Printf("\n\n\n\n\n\n%s", lists)
+			if err != nil {
+				log.Fatalf("%s", err)
+			}
+			fmt.Printf("\n\n\n\n\n\n%s", pipe)
 
 
-	fmt.Println(string(0))
+		/*
+			lists, err := GetLists("0", "false")
 
+			if err != nil {
+				log.Fatalf("%s", err)
+			}
+
+			fmt.Printf("\n\n\n\n\n\n%s", lists)
+
+
+		fmt.Println(string(0))
+
+
+	cl, err := GetClients()
+	if err != nil {
+		log.Fatalf("Failed Client call error:%s", err.Error())
+	}
+	fmt.Println(cl)
+
+	cl2, err := QueryDB("client", "a", "", "")
+	if err != nil {
+		log.Fatalf("Failed query call with error:\n%s", err.Error())
+	}
+
+	for _, cli := range(cl2){
+		cliMap := cli.(map[string]interface{})
+		fmt.Printf("clientId: %d\nName: %s\nNotes: %s\n\n", int(cliMap["clientId"].(float64)), cliMap["name"].(string), cliMap["notes"].(string))
+
+	}
 
 }
 */
