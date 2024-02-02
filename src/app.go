@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"sort"
+	"strconv"
 	"time"
 
 	//"context"
@@ -30,16 +31,39 @@ var (
 	key   = []byte{239, 57, 183, 33, 121, 175, 214, u, 52, 235, 33, 167, 74, 91, 153, 39}
 	store = sessions.NewCookieStore(key)
 )
+var hconf oauth2.Config
+var conf = &hconf
+var Clients []interface{}
 
 var templates = template.Must(template.ParseFiles(
 	"../Templates/index.html",
 	"../Templates/login.html",
 	"../Templates/logout.html",
 	"../Templates/clients.html",
+	"../Templates/addClient.html",
+	"../Templates/editClient.html",
 ))
 
-var hconf oauth2.Config
-var conf = &hconf
+type Data struct {
+	Er     bool
+	ErM    string
+	MapInt []interface{}
+}
+
+// Function handles calling the DB for the client list
+// Sorts by clientID sets global and returns nil or error
+func setClients() error {
+	var err error
+	Clients, err = apiCall.QueryDB("client", "a", "", "")
+	if err != nil {
+		return err
+	}
+
+	sort.Slice(Clients, func(i, j int) bool {
+		return int(Clients[i].(map[string]interface{})["clientId"].(float64)) < int(Clients[j].(map[string]interface{})["clientId"].(float64))
+	})
+	return nil
+}
 
 // Render the provide template string with the passed in data
 func renderTemplate(w http.ResponseWriter, tmpl string, data any) {
@@ -81,30 +105,116 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "index", session.Values["name"])
 }
 
-func clientsHandler(w http.ResponseWriter, r *http.Request) {
+func addClientHandler(w http.ResponseWriter, r *http.Request) {
 	w = setHeaders(w)
-	var err error
-	data := struct {
-		Er   bool
-		ErM  string
-		Data []interface{}
-	}{
-		Er:   false,
-		ErM:  "",
-		Data: []interface{}{},
+}
+
+// Handle delete client request
+func deleteClientHandler(w http.ResponseWriter, r *http.Request) {
+	w = setHeaders(w)
+	i := r.URL.Query()["index"][0]
+	n, _ := strconv.Atoi(i)
+	data := Data{
+		Er:     false,
+		ErM:    "",
+		MapInt: []interface{}{},
 	}
-	data.Data, err = apiCall.QueryDB("client", "a", "", "")
+
+	fmt.Printf("CLient to delete:\n%s", Clients[n])
+	//TODO: Issue delete client API call
+	//Await API constuction
+
+	err := setClients()
 	if err != nil {
 		data.Er = true
 		data.ErM = err.Error()
 		renderTemplate(w, "clients", data)
 		return
 	}
+	data.MapInt = Clients
 
-	sort.Slice(data.Data, func(i, j int) bool {
-		return int(data.Data[i].(map[string]interface{})["clientId"].(float64)) < int(data.Data[j].(map[string]interface{})["clientId"].(float64))
-	})
+	renderTemplate(w, "clients", data)
+}
 
+// Handle editing of current client
+func editClientHandler(w http.ResponseWriter, r *http.Request) {
+	w = setHeaders(w)
+	i := r.URL.Query()["index"][0]
+	n, _ := strconv.Atoi(i)
+	data := struct {
+		Er     bool
+		ErM    string
+		Ind    int
+		MapInt interface{}
+	}{
+		Er:     false,
+		ErM:    "",
+		Ind:    n,
+		MapInt: Clients[n],
+	}
+
+	switch r.Method {
+	case "GET":
+		renderTemplate(w, "editClient", data)
+		return
+	case "POST":
+		r.ParseForm()
+		cli := Clients[n].(map[string]interface{})
+		cli["name"] = r.PostForm["long-name"][0]
+		cli["shortName"] = r.PostForm["short-name"][0]
+		tzd, err := strconv.Atoi(r.PostForm["timezone-id"][0])
+		if err != nil {
+			data.Er = true
+			data.ErM = fmt.Sprintf("Time zone must be valid integer Error:%s", err.Error())
+			renderTemplate(w, "editClient", data)
+			return
+		}
+		cli["timezondId"] = float64(tzd)
+		cli["notes"] = r.PostForm["notes"][0]
+		_, ok := r.PostForm["enabled"]
+		if ok {
+			cli["isEnabled"] = true
+		} else {
+			cli["isEnabled"] = false
+		}
+
+		fmt.Printf("Edited client:\n%s", cli)
+		//TODO make edit client API call
+
+		setClients()
+		cData := Data{
+			Er:     false,
+			ErM:    "",
+			MapInt: Clients,
+		}
+		renderTemplate(w, "clients", cData)
+	default:
+		//Return error dont know how we got here but fuck lets handle it
+		cData := Data{
+			Er:     true,
+			ErM:    "How the fuck did you get here!?!",
+			MapInt: Clients,
+		}
+		renderTemplate(w, "clients", cData)
+	}
+}
+
+func clientsHandler(w http.ResponseWriter, r *http.Request) {
+	w = setHeaders(w)
+	var err error
+	data := Data{
+		Er:     false,
+		ErM:    "",
+		MapInt: []interface{}{},
+	}
+	err = setClients()
+	if err != nil {
+		data.Er = true
+		data.ErM = err.Error()
+		renderTemplate(w, "clients", data)
+		return
+	}
+	data.MapInt = Clients
 	renderTemplate(w, "clients", data)
 }
 
@@ -232,6 +342,9 @@ func main() {
 
 	http.HandleFunc("/", makeHandler(indexHandler))
 	http.HandleFunc("/clients", makeHandler(clientsHandler))
+	http.HandleFunc("/addClient", makeHandler(addClientHandler))
+	http.HandleFunc("/deleteClient", makeHandler(deleteClientHandler))
+	http.HandleFunc("/editClient", makeHandler(editClientHandler))
 
 	http.HandleFunc("/login/", loginHandler)
 	http.HandleFunc("/validate/", oauthValidate)

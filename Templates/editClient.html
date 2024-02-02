@@ -1,0 +1,61 @@
+<div class="block"></div>
+<div class="content">
+    <h1>Edit Client</h1>
+</div>
+
+<form id="edit-rule" class="box" action="/editClient" method="post">
+    <div class="field">
+        <label class="label">Long Name</label>
+        <div class="control">
+            <input id="long-name" name="long-name" class="input" type="text" value="{{.MapInt.name}}">
+        </div>
+    </div>
+    <div class="field">
+        <label class="label">Short Name</label>
+        <div class="control">
+            <input id="short-name" name="short-name" class="input" type="text" value="{{.MapInt.shortName}}">
+        </div>
+    </div>
+    <div class="field">
+        <label class="label">Time Zone ID</label>
+        <div class="control">
+            <input id="timezone-id" name="timezone-id" class="input" type="text" value="{{.MapInt.timezoneId}}">
+        </div>
+        <p class="help is-info">THis will be a space for defenitions of the timezone integers</p>
+    </div>
+    <div class="field">
+        <label class="label">Notes</label>
+        <div class="control">
+            <textarea id="notes" name="notes" class="textarea">{{.MapInt.notes}}</textarea>
+        </div>
+    </div>
+    <div class="field">
+        <div class="control">
+            <label class="checkbox">
+                {{if .MapInt.isEnabled}}
+                    <input id="enabled" name="enabled" type="checkbox" checked>Enable
+                {{else}}
+                    <input id="enabled" name="enabled" type="checkbox"><p>Enable</p>
+                {{end}}
+            </label>
+        </div>
+    </div>
+    <div class="field is-grouped is-grouped-right" >
+        <p class="control">
+            <input hx-post="/editClient?index={{.Ind}}"  hx-target="#main-swap"  class="button is-info is-outlined" type="submit" value="Submit">
+        </p>
+        <p class="conrol">
+            <input hx-get="/clients" hx-target="#main-swap" class="button is-light" type="submit" value="Cancel">
+        </p>
+    </div>
+</form>
+
+
+{{if .Er}}
+    <div class="box has-background-danger-light	">
+        <div class="content is-medium ">
+            <h2 class="has-text-black-bis">ERROR</h2>
+            <p class="has-text-black-bis">{{.ErM}}</p>
+        </div>
+    </div>
+{{end}}

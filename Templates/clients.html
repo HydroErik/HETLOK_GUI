@@ -12,7 +12,7 @@
             </tr>
         </thead>
         <tbody>
-        {{range $i, $val := .Data}}
+        {{range $i, $val := .MapInt}}
             <tr>
                 <td>{{$val.clientId}}</td>
                 <td>{{$val.name}}</td>
@@ -28,14 +28,15 @@
                 <td>{{$val.timezoneId}}</td>
                 <td>{{$val.notes}}</td>
                 <td>
-                    <a hx-get="/editClient?index={{$val.clientId}}" hx-target="#main-swap" class="fa-solid fa-pen-to-square"></a>
-                    <a hx-get="/deleteClient?index={{$val.clientId}}" hx-confirm="Confirm Delete client: {{$val.name}}" hx-target="#main-swap" class="fa-solid fa-trash"></a>
+                    <a hx-get="/editClient?index={{$i}}" hx-target="#main-swap" class="fa-solid fa-pen-to-square"></a>
+                    <a hx-get="/deleteClient?index={{$i}}" hx-confirm="Confirm Delete client: {{$val.name}}" hx-target="#main-swap" class="fa-solid fa-trash"></a>
                 </td>
 
             </tr>
             {{end}}
         </tbody>
     </table>
+    <button hx-get="/addClient" hx-target="main-swap" class="button">Add Client</button>
     {{if .Er}}
         <div class="box has-background-danger-light	">
             <div class="content is-medium ">
