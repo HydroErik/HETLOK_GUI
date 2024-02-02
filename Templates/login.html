@@ -8,65 +8,30 @@
         <title>HETLOK</title>
     </head>
     <style>
-        body {
+        #mainBlock {
           background-image: url('/resources/waterBack.jpg');
           background-repeat: no-repeat;
         }
         </style>
     <body>
-        <div class="columns">
-            <div class="column is-two-thirds">
-                <div class="card">
-                    <div class="card-image">
-                        <figure class="image is-4by3">
-                            <img src="/resources/mountains.jpg" alt="test">
-                        </figure>
+        <div id="mainBlock" class="block">
+            <section class="hero is-fullheight">
+                <div id="mainBlock" class="hero-body">
+                    <div class="container has-text-centered">
+                        <p class="title is-1">HETLOK</p>
+                        <a href="{{.}}"><button class="button is-info is-outlined"  type="submit" value="Log in">Log in</button></a>
+                        <!--
+                            <form class="box" action={{.}} method="post">
+                                <div class="field">
+                                    <p class="control">
+                                        <input class="button is-info is-outlined" type="submit" value="Log In">
+                                    </p>
+                                </div>
+                            </form>
+                        -->
                     </div>
                 </div>
-            </div>
-            <div class="column">
-                <div class="block">
-                    <p class="title is-1">HETLOK</p>
-                </div>
-                <div class="block">
-                    <form class="box" action={{.}} method="post">
-                        <div class="field">
-                            <p class="control">
-                                <input class="button is-info is-outlined" type="submit" value="Log In">
-                            </p>
-                        </div>
-                    </form>
-                </div>
-                <!-- Traditional Login code
-                <div class="block">
-                    <form class="box" action="/validate/" method="post">
-                        <div class="field" >
-                        <p class="control">
-                            <label class="label is-medium" for="username">Username: </label>
-                            <input class="input is-medium" type="text" id="username" name="username"/>
-                        </p>
-                        </div>
-                        <div class="field" >
-                        <p class="control">
-                            <label class="label is-medium" for="pass">Password: </label>
-                            <input class="input is-medium" type="password" id="pass" name="password" required/>
-                        </p>
-                        </div>
-                        <p class="subtitle is-5 has-text-danger">{{.}}</p>
-                        <div class="field" >
-                        <p class="control">
-                            <input class="button is-info is-outlined" type="submit" value="Log In">
-                        </p>
-                        </div>
-                    </form>
-                </div>
-                -->
-            </div>
-            <div class="column is-narrow">
-            </div>
+            </section>
         </div>
     </body>
-    <footer>
-
-    </footer>
 </html>
