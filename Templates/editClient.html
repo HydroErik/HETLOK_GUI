@@ -2,7 +2,7 @@
 <div class="content">
     <h1>Edit Client</h1>
 </div>
-
+{{$i := .CurInt}}
 <form id="edit-rule" class="box" action="/editClient" method="post">
     <div class="field">
         <label class="label">Long Name</label>
@@ -19,9 +19,19 @@
     <div class="field">
         <label class="label">Time Zone ID</label>
         <div class="control">
-            <input id="timezone-id" name="timezone-id" class="input" type="text" value="{{.MapInt.timezoneId}}">
+            <div class="select">
+                <select id="timezone-id" name="timezone-id">
+                    
+                    {{range $k, $v := .TZ}}
+                        {{if eq $k $i }}
+                            <option value="{{$k}}" selected>{{$v}}</option>
+                        {{else}}
+                            <option value="{{$k}}">{{$v}}</option>
+                        {{end}}
+                    {{end}}
+                </select>
+            </div>
         </div>
-        <p class="help is-info">THis will be a space for defenitions of the timezone integers</p>
     </div>
     <div class="field">
         <label class="label">Notes</label>

@@ -1,3 +1,4 @@
+{{$t := .TZ}}
 <div id="main-swap" class="column">
     <table class="table is-fullwidth is-bordered">
         <thead>
@@ -25,7 +26,7 @@
                     <td class="fa-solid fa-x"></td>
                 {{end}}
                 -->
-                <td>{{$val.timezoneId}}</td>
+                <td>{{index $t $val.timezoneId}}</td>
                 <td>{{$val.notes}}</td>
                 <td>
                     <a hx-get="/editClient?index={{$i}}" hx-target="#main-swap" class="fa-solid fa-pen-to-square"></a>
@@ -36,7 +37,7 @@
             {{end}}
         </tbody>
     </table>
-    <button hx-get="/addClient" hx-target="main-swap" class="button">Add Client</button>
+    <button hx-get="/addClient" hx-target="#main-swap" class="button">Add Client</button>
     {{if .Er}}
         <div class="box has-background-danger-light	">
             <div class="content is-medium ">

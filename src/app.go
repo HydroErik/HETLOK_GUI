@@ -44,10 +44,13 @@ var templates = template.Must(template.ParseFiles(
 	"../Templates/editClient.html",
 ))
 
-type Data struct {
+var TimeZone map[float64]string
+
+type ClData struct {
 	Er     bool
 	ErM    string
 	MapInt []interface{}
+	TZ     map[float64]string
 }
 
 // Function handles calling the DB for the client list
@@ -105,8 +108,66 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "index", session.Values["name"])
 }
 
+// Add client handler
 func addClientHandler(w http.ResponseWriter, r *http.Request) {
 	w = setHeaders(w)
+	type aData struct {
+		Er  bool
+		ErM string
+		TZ  map[float64]string
+	}
+	data := aData{Er: false, ErM: "", TZ: TimeZone}
+	switch r.Method {
+	case "GET":
+		//return the add client form
+		renderTemplate(w, "addClient", data)
+		return
+	case "POST":
+		r.ParseForm()
+
+		longName := r.PostForm["new-long-name"][0]
+		shortName := r.PostForm["new-short-name"][0]
+		tzd, _ := strconv.Atoi(r.PostForm["new-timezone-id"][0])
+		timezondId := float64(tzd)
+		notes := r.PostForm["new-notes"][0]
+		_, ok := r.PostForm["new-enabled"]
+		var isEnabled bool
+		if ok {
+			isEnabled = true
+		} else {
+			isEnabled = false
+		}
+
+		fmt.Printf("New Client name: %s\nshort name: %s\ntimezoneId: %f\nnotes: %s\nenabled: %t\n", longName, shortName, timezondId, notes, isEnabled)
+		//TODO
+		//We need to make the add client API call with the given data
+		cData := ClData{
+			Er:     false,
+			ErM:    "",
+			MapInt: Clients,
+			TZ:     TimeZone,
+		}
+		err := setClients()
+		if err != nil {
+			data.Er = true
+			data.ErM = err.Error()
+			renderTemplate(w, "clients", cData)
+			return
+		}
+		cData.MapInt = Clients
+		renderTemplate(w, "clients", cData)
+		return
+	default:
+		//Some more fun error handling for that wtf case
+		cData := ClData{
+			Er:     true,
+			ErM:    "How the fuck did you get here!?!",
+			MapInt: Clients,
+			TZ:     TimeZone,
+		}
+		renderTemplate(w, "clients", cData)
+		return
+	}
 }
 
 // Handle delete client request
@@ -114,10 +175,11 @@ func deleteClientHandler(w http.ResponseWriter, r *http.Request) {
 	w = setHeaders(w)
 	i := r.URL.Query()["index"][0]
 	n, _ := strconv.Atoi(i)
-	data := Data{
+	data := ClData{
 		Er:     false,
 		ErM:    "",
 		MapInt: []interface{}{},
+		TZ:     TimeZone,
 	}
 
 	fmt.Printf("CLient to delete:\n%s", Clients[n])
@@ -141,16 +203,21 @@ func editClientHandler(w http.ResponseWriter, r *http.Request) {
 	w = setHeaders(w)
 	i := r.URL.Query()["index"][0]
 	n, _ := strconv.Atoi(i)
+	curTZID := Clients[n].(map[string]interface{})["timezoneId"].(float64)
 	data := struct {
 		Er     bool
 		ErM    string
 		Ind    int
 		MapInt interface{}
+		TZ     map[float64]string
+		CurInt float64
 	}{
 		Er:     false,
 		ErM:    "",
 		Ind:    n,
 		MapInt: Clients[n],
+		TZ:     TimeZone,
+		CurInt: curTZID,
 	}
 
 	switch r.Method {
@@ -162,13 +229,7 @@ func editClientHandler(w http.ResponseWriter, r *http.Request) {
 		cli := Clients[n].(map[string]interface{})
 		cli["name"] = r.PostForm["long-name"][0]
 		cli["shortName"] = r.PostForm["short-name"][0]
-		tzd, err := strconv.Atoi(r.PostForm["timezone-id"][0])
-		if err != nil {
-			data.Er = true
-			data.ErM = fmt.Sprintf("Time zone must be valid integer Error:%s", err.Error())
-			renderTemplate(w, "editClient", data)
-			return
-		}
+		tzd, _ := strconv.Atoi(r.PostForm["timezone-id"][0])
 		cli["timezondId"] = float64(tzd)
 		cli["notes"] = r.PostForm["notes"][0]
 		_, ok := r.PostForm["enabled"]
@@ -177,23 +238,24 @@ func editClientHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			cli["isEnabled"] = false
 		}
-
 		fmt.Printf("Edited client:\n%s", cli)
 		//TODO make edit client API call
-
+		//
 		setClients()
-		cData := Data{
+		cData := ClData{
 			Er:     false,
 			ErM:    "",
 			MapInt: Clients,
+			TZ:     TimeZone,
 		}
 		renderTemplate(w, "clients", cData)
 	default:
 		//Return error dont know how we got here but fuck lets handle it
-		cData := Data{
+		cData := ClData{
 			Er:     true,
 			ErM:    "How the fuck did you get here!?!",
 			MapInt: Clients,
+			TZ:     TimeZone,
 		}
 		renderTemplate(w, "clients", cData)
 	}
@@ -202,10 +264,11 @@ func editClientHandler(w http.ResponseWriter, r *http.Request) {
 func clientsHandler(w http.ResponseWriter, r *http.Request) {
 	w = setHeaders(w)
 	var err error
-	data := Data{
+	data := ClData{
 		Er:     false,
 		ErM:    "",
 		MapInt: []interface{}{},
+		TZ:     TimeZone,
 	}
 	err = setClients()
 	if err != nil {
@@ -338,6 +401,16 @@ func main() {
 		Endpoint: google.Endpoint,
 	}
 
+	//TODO this can be an API call to stay consistent
+	TimeZone = map[float64]string{
+		1: "US_EASTERN",
+		2: "US_CENTRAL",
+		3: "US_ARIZONA",
+		4: "US_MOUNTAIN",
+		5: "US_PACIFIC",
+		6: "US_ALASKA",
+		7: "US_HAWAII",
+	}
 	//demoPipe, _ = apiCall.TransformerCall(true)
 
 	http.HandleFunc("/", makeHandler(indexHandler))

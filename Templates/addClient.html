@@ -1,1 +1,62 @@
-<p>hello</p>
+<div class="block"></div>
+<div class="content">
+    <h1>Add Client</h1>
+</div>
+
+<form id="add-rule" class="box" action="/addClient" method="post">
+    <div class="field">
+        <label class="label">Long Name</label>
+        <div class="control">
+            <input id="new-long-name" name="new-long-name" class="input" type="text" >
+        </div>
+    </div>
+    <div class="field">
+        <label class="label">Short Name</label>
+        <div class="control">
+            <input id="new-short-name" name="new-short-name" class="input" type="text" >
+        </div>
+    </div>
+    <div class="field">
+        <label class="label">Time Zone ID</label>
+        <div class="control">
+            <div class="select">
+                <select id="new-timezone-id" name="new-timezone-id">
+                    {{range $k, $v := .TZ}}
+                        <option value="{{$k}}">{{$v}}</option>
+                    {{end}}
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="field">
+        <label class="label">Notes</label>
+        <div class="control">
+            <textarea id="new-notes" name="new-notes" class="new-textarea"></textarea>
+        </div>
+    </div>
+    <div class="field">
+        <div class="control">
+            <label class="checkbox">
+                <input id="new-enabled" name="new-enabled" type="checkbox" checked>Enable
+            </label>
+        </div>
+    </div>
+    <div class="field is-grouped is-grouped-right" >
+        <p class="control">
+            <input hx-post="/addClient"  hx-target="#main-swap"  class="button is-info is-outlined" type="submit" value="Submit">
+        </p>
+        <p class="conrol">
+            <input hx-get="/clients" hx-target="#main-swap" class="button is-light" type="submit" value="Cancel">
+        </p>
+    </div>
+</form>
+
+
+{{if .Er}}
+    <div class="box has-background-danger-light	">
+        <div class="content is-medium ">
+            <h2 class="has-text-black-bis">ERROR</h2>
+            <p class="has-text-black-bis">{{.ErM}}</p>
+        </div>
+    </div>
+{{end}}
