@@ -128,44 +128,6 @@ func GetLists(id string, noItem string) (ListsObj, error) {
 
 }
 
-// Get Client list returns list of client objects
-// Function made obsolete by QueryDB call
-func GetClients() ([]Client, error) {
-	urlString := API_address + "query?table=client&operation=allRecords"
-
-	res, err := http.Get(urlString)
-	if err != nil {
-		return []Client{}, nil
-	}
-
-	var resp map[string]interface{}
-	var clist []Client
-
-	defer res.Body.Close()
-	err = json.NewDecoder(res.Body).Decode(&resp)
-	if err != nil {
-		return []Client{}, nil
-	}
-
-	for _, cl := range resp["queryReply"].(map[string]interface{})["content"].([]interface{}) {
-		clMap := cl.(map[string]interface{})
-		if len(clMap) > 0 {
-			newCli := Client{
-				ClientId:        clMap["clientId"].(float64),
-				Name:            clMap["name"].(string),
-				ShortName:       clMap["shortName"].(string),
-				Notes:           clMap["notes"].(string),
-				IsEnabled:       clMap["isEnabled"].(bool),
-				CreateTimeStamp: clMap["createTimestamp"].(string),
-				TimeZoneCode:    clMap["timezoneId"].(float64),
-			}
-			clist = append(clist, newCli)
-		}
-
-	}
-
-	return clist, nil
-}
 
 // Query DB api call return interface object that needs to be parsed by the function that calls
 // 3 query types {oneRecordName | oneRecordId | allRecords}
